@@ -1,40 +1,6 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql
-spec:
-  type: ClusterIP
-  selector:
-    app: airflow
-    tier: db
-  ports:
-    - name: mysql
-      protocol: TCP
-      port: 3306
-      targetPort: mysql
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-spec:
-  type: ClusterIP
-  selector:
-    app: airflow
-    tier: redis
-  ports:
-    - name: node
-      protocol: TCP
-      port: 6379
-      targetPort: node
-    - name: management
-      protocol: TCP
-      port: 16379
-      targetPort: management
----
-apiVersion: v1
-kind: Service
-metadata:
   name: airflow-web
 spec:
   type: NodePort
@@ -67,59 +33,6 @@ spec:
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: mysql
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: airflow
-        tier: db
-    spec:
-      containers:
-      - name: mysql
-        image: mysql
-        ports:
-        - name: mysql
-          containerPort: 3306
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: "airflow"
-        - name: MYSQL_DATABASE
-          value: "airflow"
-        - name: MYSQL_USER
-          value: "airflow"
-        - name: MYSQL_PASSWORD
-          value: "airflow"
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: redis
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: airflow
-        tier: redis
-    spec:
-      restartPolicy: Always
-      containers:
-      - name: redis
-        image: redis
-        ports:
-        - name: management
-          containerPort: 16379
-        - name: node
-          containerPort: 6379
-        env:
-        - name: REDIS_PASSWORD
-          value: "airflow"
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
   name: airflow-web
 spec:
   replicas: 1
@@ -136,18 +49,18 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: AIRFLOW_HOME
-          value: "/opt/local/airflow"
+          value: ${AIRFLOW_HOME}
         - name: MYSQL_DATABASE
-          value: "airflow"
+          value: ${MYSQL_DATABASE}
         - name: MYSQL_USER
-          value: "airflow"
+          value: ${MYSQL_USER}
         - name: MYSQL_PASSWORD
-          value: "airflow"
+          value: ${MYSQL_PASSWORD}
         - name: REDIS_PASSWORD
-          value: "airflow"
+          value: ${REDIS_PASSWORD}
         volumeMounts:
         - name: "airflow-dags-volume"
-          mountPath: "/opt/local/airflow/dags"
+          mountPath: "${AIRFLOW_HOME}/dags"
         ports:
         - name: web
           containerPort: 8080
@@ -155,7 +68,7 @@ spec:
       volumes:
         - name: "airflow-dags-volume"
           hostPath:
-            path: ${AIRFLOW_HOME}/dags
+            path: ${MOUNT_AIRFLOW_PATH}/dags
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -176,26 +89,26 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: AIRFLOW_HOME
-          value: "/opt/local/airflow"
+          value: ${AIRFLOW_HOME}
         - name: MYSQL_DATABASE
-          value: "airflow"
+          value: ${MYSQL_DATABASE}
         - name: MYSQL_USER
-          value: "airflow"
+          value: ${MYSQL_USER}
         - name: MYSQL_PASSWORD
-          value: "airflow"
+          value: ${MYSQL_PASSWORD}
         - name: REDIS_PASSWORD
-          value: "airflow"
+          value: ${REDIS_PASSWORD}
         ports:
         - name: flower
           containerPort: 5555
         args: ["flower"]
         volumeMounts:
         - name: "airflow-dags-volume"
-          mountPath: "/opt/local/airflow/dags"
+          mountPath: "${AIRFLOW_HOME}/dags"
       volumes:
         - name: "airflow-dags-volume"
           hostPath:
-            path: ${AIRFLOW_HOME}/dags
+            path: ${MOUNT_AIRFLOW_PATH}/dags
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -214,27 +127,25 @@ spec:
       - name: scheduler
         image: kubernetes-airflow
         imagePullPolicy: IfNotPresent
-        # volumes:
-        #     - /localpath/to/dags:/usr/local/airflow/dags
         env:
         - name: AIRFLOW_HOME
-          value: "/opt/local/airflow"
+          value: ${AIRFLOW_HOME}
         - name: MYSQL_DATABASE
-          value: "airflow"
+          value: ${MYSQL_DATABASE}
         - name: MYSQL_USER
-          value: "airflow"
+          value: ${MYSQL_USER}
         - name: MYSQL_PASSWORD
-          value: "airflow"
+          value: ${MYSQL_PASSWORD}
         - name: REDIS_PASSWORD
-          value: "airflow"
+          value: ${REDIS_PASSWORD}
         args: ["scheduler"]
         volumeMounts:
         - name: "airflow-dags-volume"
-          mountPath: "/opt/local/airflow/dags"
+          mountPath: "${AIRFLOW_HOME}/dags"
       volumes:
         - name: "airflow-dags-volume"
           hostPath:
-            path: ${AIRFLOW_HOME}/dags
+            path: ${MOUNT_AIRFLOW_PATH}/dags
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -253,27 +164,25 @@ spec:
       - name: worker
         image: kubernetes-airflow
         imagePullPolicy: IfNotPresent
-        # volumes:
-        #     - /localpath/to/dags:/usr/local/airflow/dags
         env:
         - name: AIRFLOW_HOME
-          value: "/opt/local/airflow"
+          value: ${AIRFLOW_HOME}
         # if you are root user
         - name: C_FORCE_ROOT
           value: "true"
         - name: MYSQL_DATABASE
-          value: "airflow"
+          value: ${MYSQL_DATABASE}
         - name: MYSQL_USER
-          value: "airflow"
+          value: ${MYSQL_USER}
         - name: MYSQL_PASSWORD
-          value: "airflow"
+          value: ${MYSQL_PASSWORD}
         - name: REDIS_PASSWORD
-          value: "airflow"
+          value: ${REDIS_PASSWORD}
         args: ["worker"]
         volumeMounts:
         - name: "airflow-dags-volume"
-          mountPath: "/opt/local/airflow/dags"
+          mountPath: "${AIRFLOW_HOME}/dags"
       volumes:
         - name: "airflow-dags-volume"
           hostPath:
-            path: ${AIRFLOW_HOME}/dags
+            path: ${MOUNT_AIRFLOW_PATH}/dags

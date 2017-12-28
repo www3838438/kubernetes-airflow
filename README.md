@@ -1,5 +1,8 @@
 ## Overview
 
+## Requirements
+* envsubst
+
 ## Environment variables
 * MYSQL_ROOT_PASSWORD
 * MYSQL_USER
